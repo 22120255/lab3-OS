@@ -8,6 +8,7 @@
 #include "proc.h"
 #include "fs.h"
 
+
 /*
  * the kernel's page table.
  */
@@ -486,13 +487,40 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
   }
 }
 
+// Helper function to recursively traverse the page table
+void
+vmprint_helper(pagetable_t pagetable, int depth)
+{
+    for (int i = 0; i < 512; i++) {
+        pte_t pte = pagetable[i];
+        if (pte & PTE_V) { // Check if the PTE is valid
+            uint64 pa = PTE2PA(pte); // Extract physical address from the PTE
+            // Print indentation based on depth
+            for (int j = 0; j < depth; j++) {
+                printf(" ..");
+            }
+            // Print the PTE index, the PTE value, and the physical address
+            printf("%d: pte %lx pa %lx\n", i, (unsigned long)pte, (unsigned long)pa);
+            
+            // If this is not a leaf entry, recurse into the next level
+            if ((pte & PTE_R) == 0 && (pte & PTE_W) == 0 && (pte & PTE_X) == 0) {
+                vmprint_helper((pagetable_t)pa, depth + 1);
+            }
+        }
+    }
+}
+
+
+
 
 #ifdef LAB_PGTBL
 void
 vmprint(pagetable_t pagetable) {
-  // your code here
+    printf("page table %p\n", pagetable); // In địa chỉ bảng trang
+    vmprint_helper(pagetable, 1);         // Bắt đầu đệ quy
 }
 #endif
+
 
 
 

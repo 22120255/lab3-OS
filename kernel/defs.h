@@ -1,3 +1,6 @@
+#ifndef LAB_PGTBL
+#define LAB_PGTBL
+#endif
 #ifdef LAB_MMAP
 typedef unsigned long size_t;
 typedef long int off_t;
