@@ -393,6 +393,7 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
   while(len > 0){
     va0 = PGROUNDDOWN(dstva);
     if (va0 >= MAXVA)
+
       return -1;
     if((pte = walk(pagetable, va0, 0)) == 0) {
       // printf("copyout: pte should exist 0x%x %d\n", dstva, len);
@@ -487,6 +488,7 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
   }
 }
 
+
 // Helper function to recursively traverse the page table
 void
 vmprint_helper(pagetable_t pagetable, int depth)
@@ -516,6 +518,7 @@ vmprint_helper(pagetable_t pagetable, int depth)
 #ifdef LAB_PGTBL
 void
 vmprint(pagetable_t pagetable) {
+
     printf("page table %p\n", pagetable); // In địa chỉ bảng trang
     vmprint_helper(pagetable, 1);         // Bắt đầu đệ quy
 }
