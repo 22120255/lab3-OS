@@ -1,0 +1,21 @@
+diff --git a/Makefile b/Makefile
+index 74e454f..5554a2c 100644
+--- a/Makefile
++++ b/Makefile
+@@ -187,6 +187,10 @@ UPROGS=\
+ 	$U/_ln\
+ 	$U/_ls\
+ 	$U/_mkdir\
++	$U/_pingpong\
++	$U/_primes\
++	$U/_find\
++	$U/_xargs\
+ 	$U/_rm\
+ 	$U/_sh\
+ 	$U/_stressfs\
+diff --git a/grade-lab-util b/grade-lab-util
+old mode 100755
+new mode 100644
+diff --git a/user/usys.pl b/user/usys.pl
+old mode 100755
+new mode 100644
