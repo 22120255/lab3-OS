@@ -6,6 +6,38 @@
 #include "proc.h"
 #include "syscall.h"
 #include "defs.h"
+#include "sysinfo.h"
+#include <stddef.h>  
+
+
+
+static char *syscallnames[] = {
+    [SYS_fork]   "fork",
+    [SYS_exit]   "exit",
+    [SYS_wait]   "wait",
+    [SYS_pipe]   "pipe",
+    [SYS_read]   "read",
+    [SYS_kill]   "kill",
+    [SYS_exec]   "exec",
+    [SYS_fstat]  "fstat",
+    [SYS_chdir]  "chdir",
+    [SYS_dup]    "dup",
+    [SYS_getpid] "getpid",
+    [SYS_sbrk]   "sbrk",
+    [SYS_sleep]  "sleep",
+    [SYS_uptime] "uptime",
+    [SYS_open]   "open",
+    [SYS_write]  "write",
+    [SYS_mknod]  "mknod",
+    [SYS_unlink] "unlink",
+    [SYS_link]   "link",
+    [SYS_mkdir]  "mkdir",
+    [SYS_close]  "close",
+    [SYS_trace]  "trace",
+};
+
+
+
 
 // Fetch the uint64 at addr from the current process.
 int
@@ -30,43 +62,56 @@ fetchstr(uint64 addr, char *buf, int max)
   return strlen(buf);
 }
 
-static uint64
-argraw(int n)
-{
-  struct proc *p = myproc();
-  switch (n) {
-  case 0:
-    return p->trapframe->a0;
-  case 1:
-    return p->trapframe->a1;
-  case 2:
-    return p->trapframe->a2;
-  case 3:
-    return p->trapframe->a3;
-  case 4:
-    return p->trapframe->a4;
-  case 5:
-    return p->trapframe->a5;
-  }
-  panic("argraw");
-  return -1;
-}
+// static uint64
+// argraw(int n)
+// {
+//   struct proc *p = myproc();
+//   switch (n) {
+//   case 0:
+//     return p->trapframe->a0;
+//   case 1:
+//     return p->trapframe->a1;
+//   case 2:
+//     return p->trapframe->a2;
+//   case 3:
+//     return p->trapframe->a3;
+//   case 4:
+//     return p->trapframe->a4;
+//   case 5:
+//     return p->trapframe->a5;
+//   }
+//   panic("argraw");
+//   return -1;
+// }
 
 // Fetch the nth 32-bit system call argument.
-void
-argint(int n, int *ip)
-{
-  *ip = argraw(n);
+int argint(int n, int *ip) {
+    if (n < 0 || n > 7)
+        return -1;
+
+    struct proc *p = myproc();
+    switch (n) {
+        case 0: *ip = p->trapframe->a0; break;
+        case 1: *ip = p->trapframe->a1; break;
+        case 2: *ip = p->trapframe->a2; break;
+        case 3: *ip = p->trapframe->a3; break;
+        case 4: *ip = p->trapframe->a4; break;
+        case 5: *ip = p->trapframe->a5; break;
+        case 6: *ip = p->trapframe->a6; break;
+        case 7: *ip = p->trapframe->a7; break;
+        default: return -1;  
+    }
+    return 0;
 }
 
 // Retrieve an argument as a pointer.
 // Doesn't check for legality, since
 // copyin/copyout will do that.
-void
-argaddr(int n, uint64 *ip)
-{
-  *ip = argraw(n);
-}
+// void
+// argaddr(int n, uint64 *ip)
+// {
+//   *ip = argraw(n);
+// }
 
 // Fetch the nth word-sized system call argument as a null-terminated string.
 // Copies into buf, at most max.
@@ -77,6 +122,18 @@ argstr(int n, char *buf, int max)
   uint64 addr;
   argaddr(n, &addr);
   return fetchstr(addr, buf, max);
+}
+// Hàm lấy đối số n và lưu địa chỉ vào ip
+int argaddr(int n, uint64 *addr) {
+    struct proc *p = myproc(); // Lấy tiến trình hiện tại
+    if (n >= p->trapframe->a7 || n < 0) {
+        return -1; // Nếu n không hợp lệ, trả về lỗi
+    }
+
+    // Lấy giá trị từ trapframe của tiến trình
+    *addr = *(uint64 *)((uint64 *)&p->trapframe->a0 + n);
+
+    return 0; // Thành công
 }
 
 // Prototypes for the functions that handle system calls.
@@ -101,7 +158,8 @@ extern uint64 sys_unlink(void);
 extern uint64 sys_link(void);
 extern uint64 sys_mkdir(void);
 extern uint64 sys_close(void);
-
+extern uint64 sys_trace();
+extern uint64 sys_sysinfo(void);
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
 static uint64 (*syscalls[])(void) = {
@@ -126,22 +184,50 @@ static uint64 (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
+[SYS_trace] sys_trace,
+[SYS_sysinfo] sys_sysinfo,
 };
 
 void
 syscall(void)
 {
-  int num;
-  struct proc *p = myproc();
+    struct proc *p = myproc();
+    int num = p->trapframe->a7;
 
-  num = p->trapframe->a7;
-  if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
-    // Use num to lookup the system call function for num, call it,
-    // and store its return value in p->trapframe->a0
-    p->trapframe->a0 = syscalls[num]();
-  } else {
-    printf("%d %s: unknown sys call %d\n",
-            p->pid, p->name, num);
-    p->trapframe->a0 = -1;
-  }
+    // Kiểm tra xem syscall có hợp lệ không
+    if (num < 0 || num >= NELEM(syscalls)) {
+        printf("%d %s: invalid syscall number %d\n", p->pid, p->name, num);
+        p->trapframe->a0 = -1; // Trả về lỗi
+        return;
+    }
+
+    // Kiểm tra nếu syscall không được cài đặt
+    if (syscalls[num] == NULL) {
+        printf("%d %s: syscall %d not implemented\n", p->pid, p->name, num);
+        p->trapframe->a0 = -1; // Trả về lỗi
+        return;
+    }
+
+    // Gọi hàm syscall tương ứng
+    long result = syscalls[num]();
+
+    // Kiểm tra kết quả của syscall (nếu có lỗi)
+    if (result < 0) {
+        printf("%d %s: syscall %d failed with error %ld\n", p->pid, p->name, num, result);
+        p->trapframe->a0 = -1; 
+    } else {
+        p->trapframe->a0 = result; 
+    }
+
+    if (p->tracemask & (1 << num)) {
+        printf("%d: syscall %s -> %ld\n", p->pid, syscallnames[num], p->trapframe->a0);
+    }
 }
+
+
+
+
+
+
+
+

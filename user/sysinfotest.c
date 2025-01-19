@@ -141,13 +141,21 @@ void testbad() {
   }
 }
 
-int
-main(int argc, char *argv[])
-{
-  printf("sysinfotest: start\n");
-  testcall();
-  testmem();
-  testproc();
-  printf("sysinfotest: OK\n");
-  exit(0);
+
+
+int main() {
+    struct sysinfo info;
+    
+    if (sysinfo(&info) < 0) {
+        printf("sysinfo failed\n");
+        exit(1);
+    }
+    
+    printf("Free memory: %ld bytes\n", info.freemem);
+    printf("Number of processes: %ld\n", info.nproc);
+    printf("Load average (1 min): %ld\n", info.loadavg[0]);
+    printf("Load average (5 min): %ld\n", info.loadavg[1]);
+    printf("Load average (15 min): %ld\n", info.loadavg[2]);
+    
+    exit(0);
 }

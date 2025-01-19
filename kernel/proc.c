@@ -310,6 +310,10 @@ fork(void)
 
   safestrcpy(np->name, p->name, sizeof(p->name));
 
+  // Copy the trace_mask from parent to child
+  // Ensures the child process inherits the tracing state of the parent
+  np->tracemask = p->tracemask;
+
   pid = np->pid;
 
   release(&np->lock);
@@ -324,6 +328,7 @@ fork(void)
 
   return pid;
 }
+
 
 // Pass p's abandoned children to init.
 // Caller must hold wait_lock.
@@ -693,3 +698,44 @@ procdump(void)
     printf("\n");
   }
 }
+
+
+int proc_count(void) {
+    struct proc *p;
+    int count = 0;
+
+    for (p = proc; p < &proc[NPROC]; p++) {
+        if (p->state != UNUSED)
+            count++;
+    }
+    return count;
+}
+
+
+
+
+uint64 calc_loadavg(int minutes) {
+    struct proc *p;
+    uint64 count = 0;
+    uint64 loadavg = 0;
+
+    // Tính toán số tiến trình đang chạy hoặc chờ đợi CPU
+    for (p = proc; p < &proc[NPROC]; p++) {
+        if (p->state != UNUSED) {
+            count++;
+        }
+    }
+
+    // Cập nhật load average dựa trên thời gian
+    // Ở đây ta giả sử mỗi tiến trình chiếm 1 đơn vị load. Bạn có thể cải tiến thuật toán này để tính toán chính xác hơn.
+    if (minutes == 1) {
+        loadavg = count;  // Load average trong 1 phút
+    } else if (minutes == 5) {
+        loadavg = count / 2;  // Load average trong 5 phút
+    } else if (minutes == 15) {
+        loadavg = count / 4;  // Load average trong 15 phút
+    }
+
+    return loadavg;
+}
+

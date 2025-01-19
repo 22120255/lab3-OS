@@ -86,7 +86,7 @@ struct proc {
   struct spinlock lock;
 
   // p->lock must be held when using these:
-  enum procstate state;        // Process state
+  enum procstate state;        // Process ssa
   void *chan;                  // If non-zero, sleeping on chan
   int killed;                  // If non-zero, have been killed
   int xstate;                  // Exit status to be returned to parent's wait
@@ -104,4 +104,8 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  int tracemask;
 };
+
+// Khai báo hàm tính load average
+uint64 calc_loadavg(int minutes);

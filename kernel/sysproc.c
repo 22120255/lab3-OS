@@ -5,6 +5,21 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "sysinfo.h"
+
+
+uint64
+sys_trace(void)
+{
+    int mask;
+    if(argint(0, &mask) < 0)
+        return -1;
+
+    struct proc *p = myproc();
+    p->tracemask = mask;
+    return 0;
+}
+
 
 uint64
 sys_exit(void)
@@ -90,4 +105,31 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+
+int sys_sysinfo(void) {
+    struct sysinfo info;
+    uint64 user_addr;
+
+    // Lấy địa chỉ tham số từ user space
+    if (argaddr(0, &user_addr) < 0)
+        return -1;
+
+    // Tính toán số byte bộ nhớ trống
+    info.freemem = kfreemem(); // Hàm này sẽ được thêm vào kalloc.c
+
+    // Đếm số lượng tiến trình không UNUSED
+    info.nproc = proc_count(); // Hàm này sẽ được thêm vào proc.c
+
+    // Tính toán load average trong 1 phút, 5 phút và 15 phút
+    info.loadavg[0] = calc_loadavg(1);  // Load average trong 1 phút
+    info.loadavg[1] = calc_loadavg(5);  // Load average trong 5 phút
+    info.loadavg[2] = calc_loadavg(15); // Load average trong 15 phút
+
+    // Sao chép dữ liệu `sysinfo` sang user space
+    if (copyout(myproc()->pagetable, user_addr, (char *)&info, sizeof(info)) < 0)
+        return -1;
+
+    return 0;
 }
